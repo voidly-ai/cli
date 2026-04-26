@@ -1,7 +1,7 @@
 {
   "name": "@voidly/cli",
-  "version": "0.1.0",
-  "description": "Command-line tool for Voidly's censorship intelligence APIs. Check if domains are blocked, query incidents, view shutdown forecasts, and more — all from your terminal.",
+  "version": "0.2.0",
+  "description": "Command-line tool for Voidly's censorship intelligence APIs. Check if domains are blocked, run a long-running watcher, query incidents, generate citations, view shutdown forecasts, and check Voidly service health — all from your terminal.",
   "bin": {
     "voidly": "./dist/cli.js"
   },

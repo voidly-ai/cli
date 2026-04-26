@@ -16,7 +16,7 @@ import {
 } from "./api.js";
 import { c, table, kv, pct, fmtDate, statusColor, severityColor } from "./format.js";
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 interface GlobalOpts {
   json?: boolean;
@@ -489,6 +489,172 @@ program
     }
   });
 
+// ---------- v0.2.0: status ----------
+program
+  .command("status")
+  .description("Quick health check of all Voidly services")
+  .action(async () => {
+    const opts = program.opts<GlobalOpts>();
+    const services = [
+      { name: "Worker API", url: "https://api.voidly.ai/health" },
+      { name: "Intelligence ML", url: "https://intelligence.voidly.ai:8443/health" },
+      { name: "Voidly Pay", url: "https://api.voidly.ai/v1/pay/health" },
+      { name: "Sentinel", url: "https://api.voidly.ai/v1/sentinel/health" },
+      { name: "Probes", url: "https://api.voidly.ai/v1/probe/stats" },
+      { name: "Incidents", url: "https://api.voidly.ai/data/incidents/stats" },
+    ];
+    const results = await Promise.all(
+      services.map(async (s) => {
+        const t0 = Date.now();
+        try {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 5000);
+          const r = await fetch(s.url, { signal: ctrl.signal });
+          clearTimeout(timer);
+          return { ...s, status: r.ok ? "healthy" : "degraded", code: r.status, latency: Date.now() - t0 };
+        } catch {
+          return { ...s, status: "down", code: 0, latency: Date.now() - t0 };
+        }
+      }),
+    );
+    if (opts.json) return jsonOut({ services: results });
+    console.log(c.bold("Voidly Service Status"));
+    console.log(
+      table(results, [
+        { key: "name", header: "Service" },
+        { key: "status", header: "Status", format: (v: string) => statusColor(v) },
+        { key: "code", header: "HTTP", format: (v: number) => String(v || "—") },
+        { key: "latency", header: "Latency", format: (v: number) => v + "ms" },
+      ]),
+    );
+    const downCount = results.filter((r) => r.status !== "healthy").length;
+    if (downCount > 0) {
+      console.log("\n" + c.yellow(`${downCount} service(s) not healthy.`));
+      process.exit(1);
+    } else {
+      console.log("\n" + c.green("All systems operational."));
+    }
+  });
+
+// ---------- v0.2.0: cite ----------
+program
+  .command("cite <id>")
+  .description("Generate citation for an incident (BibTeX/RIS/Markdown/Chicago/APA)")
+  .option("-f, --format <type>", "format: bibtex|ris|markdown|chicago|apa", "bibtex")
+  .action(async (id: string, options: { format: string }) => {
+    const opts = program.opts<GlobalOpts>();
+    const inc = await run(getIncident(id));
+    const fmt = options.format.toLowerCase();
+    const year = (inc.startTime || new Date().toISOString()).slice(0, 4);
+    const date = (inc.startTime || new Date().toISOString()).slice(0, 10);
+    const title = inc.title || `Censorship incident in ${inc.countryName || inc.country}`;
+    const url = `https://voidly.ai/censorship-index/incidents/${id}`;
+    const cleanId = id.replace(/[^A-Za-z0-9-]/g, "");
+
+    if (opts.json) return jsonOut({ id, format: fmt, citation: "" });
+
+    if (fmt === "bibtex") {
+      console.log(
+        `@misc{voidly_${cleanId},\n` +
+          `  author       = {{Voidly Research}},\n` +
+          `  title        = {{${title}}},\n` +
+          `  year         = {${year}},\n` +
+          `  howpublished = {Voidly Censorship Intelligence},\n` +
+          `  url          = {${url}},\n` +
+          `  note         = {Incident ID: ${id}, accessed ${new Date().toISOString().slice(0, 10)}}\n` +
+          `}`,
+      );
+    } else if (fmt === "ris") {
+      console.log(
+        `TY  - ELEC\nTI  - ${title}\nAU  - Voidly Research\nPY  - ${year}\nDA  - ${date}\nUR  - ${url}\nID  - ${id}\nER  -`,
+      );
+    } else if (fmt === "chicago") {
+      console.log(`Voidly Research. "${title}." ${date}. ${url}.`);
+    } else if (fmt === "apa") {
+      console.log(`Voidly Research. (${year}). ${title}. Voidly. ${url}`);
+    } else {
+      // markdown
+      console.log(`[${title}](${url}) — Voidly Research, ${date}. Incident ID: \`${id}\`.`);
+    }
+  });
+
+// ---------- v0.2.0: watch ----------
+program
+  .command("watch <domain>")
+  .description("Long-running watcher: poll accessibility every interval seconds")
+  .option("-c, --countries <list>", "comma-separated country codes", "IR,RU,CN")
+  .option("-i, --interval <n>", "poll interval in seconds", "60")
+  .action(async (domain: string, options: { countries: string; interval: string }) => {
+    const opts = program.opts<GlobalOpts>();
+    const countries = options.countries.split(",").map((s) => s.trim().toUpperCase());
+    const intervalMs = Math.max(10, parseInt(options.interval, 10)) * 1000;
+    const lastStatus = new Map<string, string>();
+    if (!opts.quiet) {
+      console.log(c.bold(`Watching ${domain} in ${countries.join(", ")} (every ${options.interval}s)\n`));
+      console.log(c.dim("Ctrl+C to stop"));
+    }
+    let firstRun = true;
+    const tick = async () => {
+      try {
+        // batchAccessibility takes (domains, country) — fan out per country
+        const perCountry = await Promise.all(
+          countries.map((cc) => batchAccessibility([domain], cc).catch(() => null)),
+        );
+        if (!opts.quiet) {
+          const ts = new Date().toLocaleTimeString();
+          process.stdout.write(`\r[${ts}] `);
+          for (let i = 0; i < countries.length; i++) {
+            const cc = countries[i];
+            const r = perCountry[i]?.results?.[0];
+            const s = r?.status || "unknown";
+            const prev = lastStatus.get(cc);
+            if (!firstRun && prev && prev !== s) {
+              process.stdout.write("\n" + c.yellow(`! CHANGE in ${cc}: ${prev} → ${s}`) + "\n");
+            }
+            lastStatus.set(cc, s);
+            process.stdout.write(`${cc}=${statusColor(s)} `);
+          }
+        }
+        firstRun = false;
+      } catch (err: any) {
+        process.stdout.write("\n" + c.red(`! err: ${err.message}`));
+      }
+    };
+    await tick();
+    setInterval(tick, intervalMs);
+  });
+
+// ---------- v0.2.0: bench ----------
+program
+  .command("bench")
+  .description("Quick benchmark: most-restricted countries with severity bars")
+  .option("-l, --limit <n>", "rows to show", "10")
+  .option("--topic <name>", "filter by topic")
+  .action(async (options: { limit: string; topic?: string }) => {
+    const opts = program.opts<GlobalOpts>();
+    const data = await run(getCensorshipIndex(options.topic));
+    const limit = parseInt(options.limit, 10);
+    const rows = (data.countries || []).slice(0, limit);
+    if (opts.json) return jsonOut({ countries: rows });
+    console.log(c.bold(`Most restricted countries${options.topic ? ` (${options.topic})` : ""}\n`));
+    const maxScore = rows[0]?.score || 1;
+    for (const r of rows) {
+      const barLen = Math.round(((r.score || 0) / maxScore) * 30);
+      const filled = "█".repeat(barLen);
+      // severityColor returns the colored string; build bar manually
+      const colored = (r.level || "").toLowerCase();
+      let bar = filled;
+      if (colored === "severe" || colored === "high" || colored === "critical") bar = c.red(filled);
+      else if (colored === "medium" || colored === "interference") bar = c.yellow(filled);
+      else if (colored === "low") bar = c.green(filled);
+      else bar = c.dim(filled);
+      bar += c.dim("░".repeat(30 - barLen));
+      console.log(
+        `  ${(r.code || "??").padEnd(4)} ${(r.country || "").padEnd(20)} ${bar} ${String(r.score || 0).padStart(3)}  ${c.dim(r.level || "")}`,
+      );
+    }
+  });
+
 // ---------- footer ----------
 program.addHelpText(
   "after",
@@ -496,6 +662,10 @@ program.addHelpText(
 ${c.bold("Examples:")}
   $ voidly check chat.openai.com IR
   $ voidly check whatsapp.com --countries IR,RU,CN
+  $ voidly status                              # health check all services
+  $ voidly cite IR-2026-0142 --format bibtex   # generate citation
+  $ voidly watch claude.ai --countries CN,IR   # long-running watcher
+  $ voidly bench --limit 5                      # most-restricted countries
   $ voidly summary CN
   $ voidly incidents --country IR --limit 10
   $ voidly incident IR-2026-0142
@@ -505,7 +675,7 @@ ${c.bold("Examples:")}
   $ voidly check google.com US --json | jq
 
 ${c.bold("Docs:")} https://voidly.ai/api-docs
-${c.bold("MCP:")}  npx @voidly/mcp-server  (83 tools for Claude/Cursor/Windsurf)
+${c.bold("MCP:")}  npx @voidly/mcp-server  (119 tools for Claude/Cursor/Windsurf)
 `,
 );
 
