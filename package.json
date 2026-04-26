@@ -1,0 +1,55 @@
+{
+  "name": "@voidly/cli",
+  "version": "0.1.0",
+  "description": "Command-line tool for Voidly's censorship intelligence APIs. Check if domains are blocked, query incidents, view shutdown forecasts, and more — all from your terminal.",
+  "bin": {
+    "voidly": "./dist/cli.js"
+  },
+  "type": "module",
+  "main": "./dist/cli.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "node dist/cli.js --help && node dist/cli.js check voidly.ai US",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "voidly",
+    "censorship",
+    "internet-freedom",
+    "cli",
+    "mcp",
+    "ooni",
+    "ioda",
+    "vpn",
+    "circumvention",
+    "intelligence",
+    "monitoring"
+  ],
+  "author": "Voidly <hello@voidly.ai>",
+  "license": "MIT",
+  "homepage": "https://voidly.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/voidly-ai/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/voidly-ai/cli/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  },
+  "mcpName": "io.github.voidly-ai/cli"
+}
