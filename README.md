@@ -30,3 +30,8 @@ voidly forecast IR
 The package also includes `watch`, `cite`, `bench`, and `status` commands; use `voidly --help` for their current flags. `--json` exposes API payloads where supported. The CLI makes network requests to Voidly; it does not perform in-country measurement from your machine.
 
 Source: [`src/`](src/) · Package: [npm](https://www.npmjs.com/package/@voidly/cli) · License: [MIT](LICENSE).
+
+
+## Trademarks
+
+Voidly™ and Voidpay™ are trademarks of Ai Analytics LLC. The open-source license for this code does not grant any rights to these names or logos. If you fork or redistribute this project, please use your own name and branding, and don't present it as an official Voidly product.
