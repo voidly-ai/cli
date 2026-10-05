@@ -1,0 +1,13 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Voidly CLI",
+  "description": "Node.js terminal client for public Voidly Atlas censorship and reachability read APIs. This CLI is not an MCP server or a local measurement probe.",
+  "excludeFolders": [
+    "dist",
+    "node_modules",
+    ".github"
+  ],
+  "excludeFiles": [
+    "package-lock.json"
+  ]
+}
