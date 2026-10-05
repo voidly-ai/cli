@@ -1,0 +1,18 @@
+# Voidly CLI
+
+> `@voidly/cli` is a Node.js terminal client for Voidly Atlas read APIs. It is not an MCP server or an in-country measurement probe.
+
+## Documentation
+
+- [Overview and install](https://github.com/voidly-ai/cli/blob/main/README.md): requirements, CLI commands, result interpretation, and limitations.
+- [Package metadata](https://github.com/voidly-ai/cli/blob/main/package.json): source version, Node engine, dependencies, and build scripts.
+- [Command implementation](https://github.com/voidly-ai/cli/blob/main/src/cli.ts): current arguments and command behavior.
+- [API client](https://github.com/voidly-ai/cli/blob/main/src/api.ts): requested Voidly API routes.
+- [Atlas data](https://voidly.ai/data) and [methodology](https://voidly.ai/methodology): provenance and interpretation.
+
+## MCP access
+
+- [Voidly Atlas MCP server](https://github.com/voidly-ai/atlas-mcp) is a separate product for MCP clients.
+- Its dedicated hosted Streamable HTTP endpoint is `https://atlas-mcp.voidly.ai/mcp`. The server's README documents local stdio setup; remote configuration depends on the MCP client.
+
+An `unknown` accessibility status does not prove that a domain is reachable. Forecasts are estimates, not observations of future events.
