@@ -1,5 +1,7 @@
 # @voidly/cli
 
+[![npm version](https://img.shields.io/npm/v/@voidly/cli.svg)](https://www.npmjs.com/package/@voidly/cli)
+
 Query [Voidly censorship research](https://voidly.ai/data) from a terminal. The CLI wraps public read endpoints for domain accessibility, country summaries, incidents, the censorship index, and shutdown-risk estimates.
 
 ## Install and use
