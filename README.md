@@ -32,6 +32,17 @@ The package also includes `watch`, `cite`, `bench`, and `status` commands; use `
 Source: [`src/`](src/) · Package: [npm](https://www.npmjs.com/package/@voidly/cli) · License: [MIT](LICENSE).
 
 
+## MCP clients
+
+`@voidly/cli` is a terminal program, not an MCP server. To give Cursor, VS Code,
+or another MCP client access to Atlas data, configure the separate
+[Voidly Atlas MCP server](https://github.com/voidly-ai/atlas-mcp). Its dedicated
+hosted Streamable HTTP endpoint is `https://atlas-mcp.voidly.ai/mcp`. The
+server's README documents local stdio setup; remote configuration depends on
+the MCP client. This CLI's commands and the server's tools are separate
+interfaces.
+
+
 ## Trademarks
 
 Voidly™ and Voidpay™ are trademarks of Ai Analytics LLC. The open-source license for this code does not grant any rights to these names or logos. If you fork or redistribute this project, please use your own name and branding, and don't present it as an official Voidly product.
